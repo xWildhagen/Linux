@@ -1,0 +1,143 @@
+@import url("mocha.css");
+
+/* General */
+* {
+  font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
+  font-size: 12pt;
+  border: none;
+}
+
+/* Bar background */
+window#waybar {
+  background: transparent;
+  color: @text;
+}
+
+/* Each module is a rounded pill */
+#workspaces,
+#clock,
+#cpu,
+#memory,
+#pulseaudio,
+#backlight,
+#battery,
+#network,
+#tray,
+#window {
+  background: @surface0;
+  color: @text;
+  padding: 4px 10px;
+  margin: 0 4px;
+  border-radius: 999px;
+}
+
+/* Workspaces */
+#workspaces {
+  background: transparent;
+}
+
+#workspaces button {
+  background: @surface0;
+  color: @subtext0;
+  padding: 4px 10px;
+  margin: 0 4px;
+  border-radius: 999px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+#workspaces button:hover {
+  background: @surface1;
+  color: @text;
+}
+
+#workspaces button.active {
+  background: @mauve;
+  color: @crust;
+}
+
+#workspaces button.urgent {
+  background: @red;
+  color: @crust;
+}
+
+/* Title of active window */
+#window {
+  background: @surface0;
+  color: @subtext1;
+}
+
+/* Clock */
+#clock {
+  background: @surface0;
+  color: @lavender;
+}
+
+/* CPU & memory */
+#cpu {
+  background: @surface0;
+  color: @peach;
+}
+
+#memory {
+  background: @surface0;
+  color: @sky;
+}
+
+/* Audio */
+#pulseaudio {
+  background: @surface0;
+  color: @green;
+}
+
+#pulseaudio.muted {
+  color: @overlay1;
+}
+
+/* Backlight */
+#backlight {
+  background: @surface0;
+  color: @yellow;
+}
+
+/* Battery */
+#battery {
+  background: @surface0;
+  color: @teal;
+}
+
+#battery.warning {
+  background: @peach;
+  color: @crust;
+}
+
+#battery.critical {
+  background: @red;
+  color: @crust;
+}
+
+/* Network */
+#network {
+  background: @surface0;
+  color: @blue;
+}
+
+#network.disconnected {
+  background: @surface0;
+  color: @red;
+}
+
+/* System tray */
+#tray {
+  background: @surface0;
+}
+
+/* Tooltips */
+tooltip {
+  background: @surface0;
+  border-radius: 8px;
+  border: 1px solid @surface1;
+}
+
+tooltip label {
+  color: @text;
+}

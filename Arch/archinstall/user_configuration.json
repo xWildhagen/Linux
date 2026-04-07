@@ -1,0 +1,60 @@
+{
+  "app_config": {
+    "audio_config": {
+      "audio": "pipewire"
+    },
+    "bluetooth_config": {
+      "enabled": true
+    }
+  },
+  "archinstall-language": "English",
+  "auth_config": {},
+  "bootloader": "Systemd-boot",
+  "custom_commands": [],
+  "hostname": "arch",
+  "kernels": ["linux"],
+  "locale_config": {
+    "kb_layout": "no",
+    "sys_enc": "UTF-8",
+    "sys_lang": "en_GB.UTF-8"
+  },
+  "mirror_config": {
+    "custom_repositories": [],
+    "custom_servers": [],
+    "mirror_regions": {
+      "Norway": [
+        "http://mirror.archlinux.no/$repo/os/$arch",
+        "https://mirror.archlinux.no/$repo/os/$arch",
+        "http://archlinux.uib.no/$repo/os/$arch",
+        "http://mirror.neuf.no/archlinux/$repo/os/$arch",
+        "https://mirror.neuf.no/archlinux/$repo/os/$arch",
+        "https://archlinux.lysakermoen.com/$repo/os/$arch"
+      ]
+    },
+    "optional_repositories": []
+  },
+  "network_config": {
+    "type": "iso"
+  },
+  "ntp": true,
+  "packages": ["git"],
+  "parallel_downloads": 0,
+  "profile_config": {
+    "gfx_driver": "All open-source",
+    "greeter": "sddm",
+    "profile": {
+      "custom_settings": {
+        "Hyprland": {
+          "seat_access": "polkit"
+        }
+      },
+      "details": ["Hyprland"],
+      "main": "Desktop"
+    }
+  },
+  "script": null,
+  "services": [],
+  "swap": true,
+  "timezone": "Europe/Oslo",
+  "version": "3.0.11"
+}
