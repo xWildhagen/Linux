@@ -68,7 +68,9 @@ partition_drive() {
     local drive="$1"
 
     echo "⏳ Wiping and partitioning ${drive}..."
-    wipefs -a "${drive}"
+    swapoff -a 2>/dev/null || true
+    umount -f "${drive}"* 2>/dev/null || true
+    wipefs -af "${drive}"
     parted -s "${drive}" mklabel gpt
     local efi_end=$(( EFI_SIZE_MIB + 1 ))
     parted -s "${drive}" mkpart EFI fat32 1MiB "${efi_end}MiB"
