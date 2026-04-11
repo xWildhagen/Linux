@@ -2,6 +2,11 @@
 
 set -eou pipefail
 
+if [[ "${EUID}" -ne 0 ]]; then
+    echo -e "❌ Error: Run as root or with sudo!"
+    exit 1
+fi
+
 # ==========================================
 # VARIABLES
 # ==========================================
@@ -43,7 +48,8 @@ PACKAGES=(
 # ==========================================
 cleanup() {
     echo "⏳ Unmounting filesystems..."
-    umount -R /mnt 2>/dev/null || true
+    sync
+    umount -R /mnt 2>/dev/null || umount -lR /mnt 2>/dev/null || true
 }
 
 get_partition_names() {
@@ -215,9 +221,11 @@ main() {
 
     trap - EXIT ERR INT
 
-    echo "✅ Installation complete! Unmounting filesystems..."
-    umount -R /mnt
-    
+    echo "✅ Installation complete! Unmounting file systems..."
+    sync
+    sleep 1
+    umount -R /mnt || umount -lR /mnt
+
     echo "🎉 Done! You can now type 'reboot' and remove your USB."
 }
 
