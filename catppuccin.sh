@@ -114,7 +114,7 @@ install_limine() {
 
     log_info "Found config: ${limine_conf}"
 
-    if grep -q 'Catppuccin Mocha' "${limine_conf}" 2>/dev/null; then
+    if sudo grep -q 'Catppuccin Mocha' "${limine_conf}" 2>/dev/null; then
         log_warn "Catppuccin Mocha theme already present in ${limine_conf}"
         log_info "Remove the existing theme block first if you want to re-apply"
         return 0
@@ -127,7 +127,7 @@ install_limine() {
     log_info "Prepending ${theme_file} to ${limine_conf}"
     local tmp_conf
     tmp_conf=$(mktemp)
-    cat "${theme_path}" "${limine_conf}" > "${tmp_conf}"
+    cat "${theme_path}" <(sudo cat "${limine_conf}") > "${tmp_conf}"
     sudo cp "${tmp_conf}" "${limine_conf}"
     rm -f "${tmp_conf}"
 
