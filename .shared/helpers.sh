@@ -6,7 +6,7 @@ log_info() {
     echo "ℹ️ $*"
 }
 
-log_ok() {
+log_success() {
     echo "✅ $*"
 }
 

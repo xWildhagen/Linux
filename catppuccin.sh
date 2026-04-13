@@ -9,7 +9,7 @@ source "${SCRIPT_DIR}/.shared/helpers.sh"
 
 CATPPUCCIN_DIR="${HOME}/catppuccin"
 
-AVAILABLE_PORTS=("kde" "limine")
+AVAILABLE_PORTS=("kde" "limine" "btop")
 
 # ─── Usage ──────────────────────────────────────────────────────────────────────
 
@@ -24,6 +24,7 @@ Options:
   --all       Install all available ports
   --kde       Install the KDE Plasma theme
   --limine    Apply Catppuccin Mocha to the Limine bootloader
+  --btop      Install Catppuccin Mocha theme for btop
 
 Available ports: ${AVAILABLE_PORTS[*]}
 Clone directory: ${CATPPUCCIN_DIR}
@@ -54,7 +55,7 @@ install_kde() {
 
     (cd "${kde_dir}" && bash ./install.sh)
 
-    log_ok "Catppuccin KDE theme installation complete"
+    log_success "Catppuccin KDE theme installation complete"
 }
 
 # ─── Port: Limine ───────────────────────────────────────────────────────────────
@@ -120,10 +121,6 @@ install_limine() {
         return 0
     fi
 
-    local backup="${limine_conf}.bak.$(date +%Y%m%d%H%M%S)"
-    log_info "Backing up to ${backup}"
-    sudo cp "${limine_conf}" "${backup}"
-
     log_info "Prepending ${theme_file} to ${limine_conf}"
     local tmp_conf
     tmp_conf=$(mktemp)
@@ -131,8 +128,29 @@ install_limine() {
     sudo cp "${tmp_conf}" "${limine_conf}"
     rm -f "${tmp_conf}"
 
-    log_ok "Catppuccin Mocha applied to Limine bootloader"
+    log_success "Catppuccin Mocha applied to Limine bootloader"
     log_info "Reboot to see the themed boot menu"
+}
+
+# ─── Port: btop ─────────────────────────────────────────────────────────────────
+
+install_btop() {
+    log_step "Installing Catppuccin Mocha theme for btop"
+
+    local btop_dir="${CATPPUCCIN_DIR}/btop"
+    local btop_repo="https://github.com/catppuccin/btop"
+    local btop_themes_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/btop/themes"
+
+    ensure_dependencies git btop
+
+    clone_or_pull "${btop_repo}" "${btop_dir}"
+
+    mkdir -p "${btop_themes_dir}"
+    cp "${btop_dir}/themes/"*.theme "${btop_themes_dir}/"
+
+    log_info "Installed themes to ${btop_themes_dir}/"
+    log_info "Open btop → Esc → Options to select Catppuccin Mocha"
+    log_success "Catppuccin btop themes installed"
 }
 
 
@@ -154,7 +172,7 @@ run_ports() {
         fi
     done
 
-    log_ok "Done!"
+    log_success "Done!"
 }
 
 main() {
@@ -172,6 +190,9 @@ main() {
             ;;
         --limine)
             run_ports "limine"
+            ;;
+        --btop)
+            run_ports "btop"
             ;;
         --help)
             usage
