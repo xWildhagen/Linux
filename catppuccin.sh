@@ -77,15 +77,21 @@ install_limine() {
     fi
 
     local limine_conf=""
-    for candidate in /boot/limine.conf /boot/efi/limine.conf /efi/limine.conf; do
+    for candidate in /boot/limine.conf /boot/efi/limine.conf /efi/limine.conf /esp/limine.conf; do
         if [[ -f "${candidate}" ]]; then
             limine_conf="${candidate}"
             break
         fi
     done
 
+    # Fallback: search common mount points
     if [[ -z "${limine_conf}" ]]; then
-        log_error "Could not find limine.conf in /boot or /boot/efi"
+        limine_conf=$(find /boot /efi /esp -maxdepth 2 -name 'limine.conf' -print -quit 2>/dev/null || true)
+    fi
+
+    if [[ -z "${limine_conf}" ]]; then
+        log_error "Could not find limine.conf"
+        log_info "Searched: /boot, /efi, /esp"
         log_info "If your limine.conf is elsewhere, prepend ${theme_path} manually"
         return 1
     fi
