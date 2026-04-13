@@ -77,22 +77,38 @@ install_limine() {
     fi
 
     local limine_conf=""
-    for candidate in /boot/limine.conf /boot/efi/limine.conf /efi/limine.conf /esp/limine.conf; do
-        if [[ -f "${candidate}" ]]; then
-            limine_conf="${candidate}"
-            break
-        fi
-    done
+    local -a search_roots=(/boot /boot/efi /efi /esp)
 
-    # Fallback: search common mount points
-    if [[ -z "${limine_conf}" ]]; then
-        limine_conf=$(find /boot /efi /esp -maxdepth 2 -name 'limine.conf' -print -quit 2>/dev/null || true)
+    local esp_mount
+    esp_mount=$(findmnt -n -o TARGET -S PARTLABEL=EFI 2>/dev/null \
+             || findmnt -n -o TARGET -t vfat /boot 2>/dev/null \
+             || true)
+    if [[ -n "${esp_mount}" ]]; then
+        search_roots+=("${esp_mount}")
     fi
+
+    local -a rel_paths=(
+        "limine.conf"
+        "limine/limine.conf"
+        "boot/limine.conf"
+        "boot/limine/limine.conf"
+        "EFI/BOOT/limine.conf"
+    )
+
+    for root in "${search_roots[@]}"; do
+        for rel in "${rel_paths[@]}"; do
+            if sudo test -f "${root}/${rel}"; then
+                limine_conf="${root}/${rel}"
+                break 2
+            fi
+        done
+    done
 
     if [[ -z "${limine_conf}" ]]; then
         log_error "Could not find limine.conf"
-        log_info "Searched: /boot, /efi, /esp"
-        log_info "If your limine.conf is elsewhere, prepend ${theme_path} manually"
+        log_info "Searched roots: ${search_roots[*]}"
+        log_info "Run: sudo find / -name 'limine.conf' 2>/dev/null"
+        log_info "Then prepend ${theme_path} manually"
         return 1
     fi
 
