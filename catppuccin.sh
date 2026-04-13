@@ -38,10 +38,8 @@ install_kde() {
     local kde_dir="${CATPPUCCIN_DIR}/kde"
     local kde_repo="https://github.com/catppuccin/kde"
 
-    # Dependencies required by the upstream install.sh
     ensure_dependencies git wget sed unzip
 
-    # lookandfeeltool ships with plasma-workspace on KDE Plasma 6
     if ! command -v lookandfeeltool &> /dev/null; then
         log_warn "lookandfeeltool not found — make sure plasma-workspace is installed"
         log_info "Attempting to install plasma-workspace..."
@@ -54,7 +52,6 @@ install_kde() {
     log_info "Follow the interactive prompts to choose flavor, accent, and window decoration."
     echo ""
 
-    # Run the upstream install script from within its directory
     (cd "${kde_dir}" && bash ./install.sh)
 
     log_ok "Catppuccin KDE theme installation complete"
@@ -65,14 +62,12 @@ install_kde() {
 install_login-manager() {
     log_step "Applying Catppuccin Mocha to Plasma Login Manager"
 
-    # Plasma Login Manager uses Plasma's native color schemes, not QML themes.
-    # We need a built Catppuccin Mocha .colors file. The KDE port produces one
-    # during its interactive install — look for it first.
     local user_color_dir="${XDG_DATA_HOME:-${HOME}/.local/share}/color-schemes"
     local system_color_dir="/usr/share/color-schemes"
-    local color_file=""
+    local user_kdeglobals="${HOME}/.config/kdeglobals"
+    local greeter_data_dir="/var/lib/plasmalogin"
 
-    # Find any CatppuccinMocha*.colors already built by the KDE port
+    local color_file=""
     if [[ -d "${user_color_dir}" ]]; then
         color_file=$(find "${user_color_dir}" -maxdepth 1 -name 'CatppuccinMocha*.colors' -print -quit 2>/dev/null || true)
     fi
@@ -87,35 +82,24 @@ install_login-manager() {
     color_basename=$(basename "${color_file}")
     log_info "Found color scheme: ${color_basename}"
 
-    # Copy the color scheme to the system-wide directory so the login manager
-    # (which runs as a system service) can access it
     log_info "Installing color scheme to ${system_color_dir}/"
     sudo cp "${color_file}" "${system_color_dir}/${color_basename}"
 
-    # Extract the internal ColorScheme name from the .colors file
-    local scheme_name
-    scheme_name=$(grep '^ColorScheme=' "${color_file}" | head -1 | cut -d'=' -f2)
-
-    if [[ -z "${scheme_name}" ]]; then
-        log_warn "Could not determine ColorScheme name from ${color_basename}"
-        log_info "You can still apply it manually via System Settings → Login Screen"
-        return 0
+    if [[ -f "${user_kdeglobals}" ]]; then
+        log_info "Syncing kdeglobals to ${greeter_data_dir}/"
+        sudo mkdir -p "${greeter_data_dir}"
+        sudo cp "${user_kdeglobals}" "${greeter_data_dir}/kdeglobals"
+    else
+        log_warn "No kdeglobals found at ${user_kdeglobals}"
+        log_info "Apply the Catppuccin theme to your desktop first, then re-run this"
+        return 1
     fi
 
-    # Create a plasmalogin.conf.d drop-in to set the color scheme
-    local dropin_dir="/etc/plasmalogin.conf.d"
-    local dropin_file="${dropin_dir}/catppuccin.conf"
-
-    log_info "Creating login manager config: ${dropin_file}"
-    sudo mkdir -p "${dropin_dir}"
-    sudo tee "${dropin_file}" > /dev/null <<EOF
-[Greeter]
-ColorScheme=${scheme_name}
-EOF
+    sudo cp "${color_file}" "${greeter_data_dir}/${color_basename}"
 
     log_ok "Catppuccin Mocha applied to Plasma Login Manager"
-    log_info "You may also apply it via System Settings → Login Screen"
-    log_info "A reboot or service restart is required to see changes"
+    log_info "Reboot to see the changes on the login screen"
+    log_info "You can also apply via: System Settings → Login Screen → Apply Plasma Settings"
 }
 
 # ─── Dispatch ───────────────────────────────────────────────────────────────────
