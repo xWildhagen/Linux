@@ -9,7 +9,7 @@ source "${SCRIPT_DIR}/.shared/helpers.sh"
 
 CATPPUCCIN_DIR="${HOME}/catppuccin"
 
-AVAILABLE_PORTS=("kde" "limine" "btop")
+AVAILABLE_PORTS=("alacritty" "btop" "kde" "limine")
 
 # ─── Usage ──────────────────────────────────────────────────────────────────────
 
@@ -20,15 +20,85 @@ usage() {
 Usage: ./catppuccin.sh [OPTION]
 
 Options:
-  --help      Show this help message
-  --all       Install all available ports
-  --kde       Install the KDE Plasma theme
+  --help       Show this help message
+  --all        Install all available ports
+  --alacritty  Install Catppuccin Mocha theme for Alacritty
+  --btop       Install Catppuccin Mocha theme for btop
+  --kde        Install the KDE Plasma theme
   --limine    Apply Catppuccin Mocha to the Limine bootloader
-  --btop      Install Catppuccin Mocha theme for btop
 
 Available ports: ${AVAILABLE_PORTS[*]}
 Clone directory: ${CATPPUCCIN_DIR}
 EOF
+}
+
+# ─── Port: Alacritty ─────────────────────────────────────────────────────────────
+
+install_alacritty() {
+    log_step "Installing Catppuccin Mocha theme for Alacritty"
+
+    local alacritty_dir="${CATPPUCCIN_DIR}/alacritty"
+    local alacritty_repo="https://github.com/catppuccin/alacritty"
+    local alacritty_config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/alacritty"
+    local alacritty_conf="${alacritty_config_dir}/alacritty.toml"
+    local theme_file="catppuccin-mocha.toml"
+
+    ensure_dependencies git alacritty
+
+    clone_or_pull "${alacritty_repo}" "${alacritty_dir}"
+
+    mkdir -p "${alacritty_config_dir}"
+    cp "${alacritty_dir}/${theme_file}" "${alacritty_config_dir}/"
+    log_info "Copied ${theme_file} to ${alacritty_config_dir}/"
+
+    # Create alacritty.toml if it doesn't exist
+    if [[ ! -f "${alacritty_conf}" ]]; then
+        touch "${alacritty_conf}"
+        log_info "Created ${alacritty_conf}"
+    fi
+
+    # Add the import line if not already present
+    local import_path="~/.config/alacritty/${theme_file}"
+    if grep -q "${theme_file}" "${alacritty_conf}" 2>/dev/null; then
+        log_warn "${theme_file} already referenced in ${alacritty_conf}"
+    else
+        # Prepend the import at the top of the file
+        local tmp_conf
+        tmp_conf=$(mktemp)
+        {
+            echo 'general.import = ['
+            echo "    \"${import_path}\"" 
+            echo ']'
+            echo ''
+            cat "${alacritty_conf}"
+        } > "${tmp_conf}"
+        cp "${tmp_conf}" "${alacritty_conf}"
+        rm -f "${tmp_conf}"
+        log_info "Added import for ${theme_file} to ${alacritty_conf}"
+    fi
+
+    log_success "Catppuccin Mocha theme installed for Alacritty"
+}
+
+# ─── Port: btop ─────────────────────────────────────────────────────────────────
+
+install_btop() {
+    log_step "Installing Catppuccin Mocha theme for btop"
+
+    local btop_dir="${CATPPUCCIN_DIR}/btop"
+    local btop_repo="https://github.com/catppuccin/btop"
+    local btop_themes_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/btop/themes"
+
+    ensure_dependencies git btop
+
+    clone_or_pull "${btop_repo}" "${btop_dir}"
+
+    mkdir -p "${btop_themes_dir}"
+    cp "${btop_dir}/themes/"*.theme "${btop_themes_dir}/"
+
+    log_info "Installed themes to ${btop_themes_dir}/"
+    log_info "Open btop → Esc → Options to select Catppuccin Mocha"
+    log_success "Catppuccin btop themes installed"
 }
 
 # ─── Port: KDE ──────────────────────────────────────────────────────────────────
@@ -132,28 +202,6 @@ install_limine() {
     log_info "Reboot to see the themed boot menu"
 }
 
-# ─── Port: btop ─────────────────────────────────────────────────────────────────
-
-install_btop() {
-    log_step "Installing Catppuccin Mocha theme for btop"
-
-    local btop_dir="${CATPPUCCIN_DIR}/btop"
-    local btop_repo="https://github.com/catppuccin/btop"
-    local btop_themes_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/btop/themes"
-
-    ensure_dependencies git btop
-
-    clone_or_pull "${btop_repo}" "${btop_dir}"
-
-    mkdir -p "${btop_themes_dir}"
-    cp "${btop_dir}/themes/"*.theme "${btop_themes_dir}/"
-
-    log_info "Installed themes to ${btop_themes_dir}/"
-    log_info "Open btop → Esc → Options to select Catppuccin Mocha"
-    log_success "Catppuccin btop themes installed"
-}
-
-
 # ─── Dispatch ───────────────────────────────────────────────────────────────────
 
 run_ports() {
@@ -185,14 +233,17 @@ main() {
         --all)
             run_ports "${AVAILABLE_PORTS[@]}"
             ;;
+        --alacritty)
+            run_ports "alacritty"
+            ;;
+        --btop)
+            run_ports "btop"
+            ;;
         --kde)
             run_ports "kde"
             ;;
         --limine)
             run_ports "limine"
-            ;;
-        --btop)
-            run_ports "btop"
             ;;
         --help)
             usage
