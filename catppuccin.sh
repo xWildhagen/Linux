@@ -37,45 +37,16 @@ EOF
 install_alacritty() {
     log_step "Installing Catppuccin Mocha theme for Alacritty"
 
-    local alacritty_dir="${CATPPUCCIN_DIR}/alacritty"
+    local alacritty_repo_dir="${CATPPUCCIN_DIR}/alacritty"
     local alacritty_repo="https://github.com/catppuccin/alacritty"
     local alacritty_config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/alacritty"
-    local alacritty_conf="${alacritty_config_dir}/alacritty.toml"
-    local theme_file="catppuccin-mocha.toml"
 
     ensure_dependencies git alacritty
 
-    clone_or_pull "${alacritty_repo}" "${alacritty_dir}"
+    clone_or_pull "${alacritty_repo}" "${alacritty_repo_dir}"
 
     mkdir -p "${alacritty_config_dir}"
-    cp "${alacritty_dir}/${theme_file}" "${alacritty_config_dir}/"
-    log_info "Copied ${theme_file} to ${alacritty_config_dir}/"
-
-    # Create alacritty.toml if it doesn't exist
-    if [[ ! -f "${alacritty_conf}" ]]; then
-        touch "${alacritty_conf}"
-        log_info "Created ${alacritty_conf}"
-    fi
-
-    # Add the import line if not already present
-    local import_path="~/.config/alacritty/${theme_file}"
-    if grep -q "${theme_file}" "${alacritty_conf}" 2>/dev/null; then
-        log_warn "${theme_file} already referenced in ${alacritty_conf}"
-    else
-        # Prepend the import at the top of the file
-        local tmp_conf
-        tmp_conf=$(mktemp)
-        {
-            echo 'general.import = ['
-            echo "    \"${import_path}\"" 
-            echo ']'
-            echo ''
-            cat "${alacritty_conf}"
-        } > "${tmp_conf}"
-        cp "${tmp_conf}" "${alacritty_conf}"
-        rm -f "${tmp_conf}"
-        log_info "Added import for ${theme_file} to ${alacritty_conf}"
-    fi
+    cp -f "${alacritty_repo_dir}/catppuccin-mocha.toml" "${alacritty_config_dir}/alacritty.toml"
 
     log_success "Catppuccin Mocha theme installed for Alacritty"
 }
