@@ -9,7 +9,7 @@ source "${SCRIPT_DIR}/.shared/helpers.sh"
 
 CATPPUCCIN_DIR="${HOME}/catppuccin"
 
-AVAILABLE_PORTS=("alacritty" "btop" "kde" "konsole" "limine" "lxqt" "micro" "mpv" "qt5ct" "qtcreator" "qterminal" "vim")
+AVAILABLE_PORTS=("alacritty" "btop" "kde" "konsole" "limine" "lxqt" "micro" "mpv" "qt5ct" "qtcreator" "vim")
 
 # ─── Usage ──────────────────────────────────────────────────────────────────────
 
@@ -32,7 +32,6 @@ Options:
   --mpv        Install Catppuccin Mocha theme for mpv
   --qt5ct      Install Catppuccin Mocha theme for qt5ct/qt6ct
   --qtcreator  Install Catppuccin Mocha theme for Qt Creator
-  --qterminal  Install Catppuccin Mocha theme for QTerminal
   --vim        Install Catppuccin Mocha theme for Vim
 
 Available ports: ${AVAILABLE_PORTS[*]}
@@ -333,32 +332,6 @@ install_qtcreator() {
     log_success "Catppuccin Mocha theme installed for Qt Creator"
 }
 
-# ─── Port: QTerminal ────────────────────────────────────────────────────────────
-
-install_qterminal() {
-    log_step "Installing Catppuccin Mocha theme for QTerminal"
-
-    local qterminal_repo_dir="${CATPPUCCIN_DIR}/qterminal"
-    local qterminal_repo="https://github.com/catppuccin/qterminal"
-    local color_schemes_dir="/usr/share/qtermwidget5/color-schemes"
-
-    ensure_dependencies git qterminal
-
-    clone_or_pull "${qterminal_repo}" "${qterminal_repo_dir}"
-
-    if [[ ! -d "${color_schemes_dir}" ]]; then
-        log_warn "Color schemes directory not found: ${color_schemes_dir}"
-        log_info "Creating directory..."
-        sudo mkdir -p "${color_schemes_dir}"
-    fi
-
-    sudo cp -f "${qterminal_repo_dir}/src/Catppuccin-Mocha.colorscheme" "${color_schemes_dir}/"
-
-    log_info "Installed colorscheme to ${color_schemes_dir}/"
-    log_info "Open QTerminal → File → Preferences → Appearance → Color scheme to select Catppuccin-Mocha"
-    log_success "Catppuccin Mocha theme installed for QTerminal"
-}
-
 # ─── Port: Vim ──────────────────────────────────────────────────────────────────
 
 install_vim() {
@@ -448,9 +421,6 @@ main() {
             ;;
         --qtcreator)
             run_ports "qtcreator"
-            ;;
-        --qterminal)
-            run_ports "qterminal"
             ;;
         --vim)
             run_ports "vim"
