@@ -9,7 +9,7 @@ source "${SCRIPT_DIR}/.shared/helpers.sh"
 
 CATPPUCCIN_DIR="${HOME}/catppuccin"
 
-AVAILABLE_PORTS=("alacritty" "btop" "kde" "konsole" "limine" "lxqt" "micro" "mpv" "qt5ct" "qtcreator" "vim")
+AVAILABLE_PORTS=("alacritty" "btop" "kde" "konsole" "limine" "micro" "mpv" "vim")
 
 # ─── Usage ──────────────────────────────────────────────────────────────────────
 
@@ -27,11 +27,8 @@ Options:
   --kde        Install Catppuccin Mocha theme for KDE Plasma
   --konsole    Install Catppuccin Mocha theme for Konsole
   --limine     Install Catppuccin Mocha theme for Limine
-  --lxqt       Install Catppuccin Mocha theme for LXQt
   --micro      Install Catppuccin Mocha theme for micro
   --mpv        Install Catppuccin Mocha theme for mpv
-  --qt5ct      Install Catppuccin Mocha theme for qt5ct/qt6ct
-  --qtcreator  Install Catppuccin Mocha theme for Qt Creator
   --vim        Install Catppuccin Mocha theme for Vim
 
 Available ports: ${AVAILABLE_PORTS[*]}
@@ -201,32 +198,6 @@ install_limine() {
     log_info "Reboot to see the themed boot menu"
 }
 
-# ─── Port: LXQt ─────────────────────────────────────────────────────────────────
-
-install_lxqt() {
-    log_step "Installing Catppuccin Mocha theme for LXQt"
-
-    local lxqt_repo_dir="${CATPPUCCIN_DIR}/lxqt"
-    local lxqt_repo="https://github.com/catppuccin/lxqt"
-    local lxqt_themes_dir="/usr/share/lxqt/themes"
-
-    ensure_dependencies git
-
-    clone_or_pull "${lxqt_repo}" "${lxqt_repo_dir}"
-
-    if [[ ! -d "${lxqt_repo_dir}/src/catppuccin-mocha" ]]; then
-        log_error "Theme directory not found: ${lxqt_repo_dir}/src/catppuccin-mocha"
-        return 1
-    fi
-
-    sudo mkdir -p "${lxqt_themes_dir}"
-    sudo cp -rf "${lxqt_repo_dir}/src/catppuccin-mocha" "${lxqt_themes_dir}/"
-
-    log_info "Installed theme to ${lxqt_themes_dir}/catppuccin-mocha/"
-    log_info "Go to Appearance → Theme → select Catppuccin Mocha"
-    log_success "Catppuccin Mocha theme installed for LXQt"
-}
-
 # ─── Port: micro ────────────────────────────────────────────────────────────────
 
 install_micro() {
@@ -275,61 +246,6 @@ install_mpv() {
 
     log_info "Installed ${accent} accent from Mocha flavor"
     log_success "Catppuccin Mocha theme installed for mpv"
-}
-
-# ─── Port: qt5ct ────────────────────────────────────────────────────────────────
-
-install_qt5ct() {
-    log_step "Installing Catppuccin Mocha theme for qt5ct/qt6ct"
-
-    local qt5ct_repo_dir="${CATPPUCCIN_DIR}/qt5ct"
-    local qt5ct_repo="https://github.com/catppuccin/qt5ct"
-    local accent="mauve"
-    local theme_file="catppuccin-mocha-${accent}.conf"
-    local qt5ct_colors_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/qt5ct/colors"
-    local qt6ct_colors_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/qt6ct/colors"
-
-    ensure_dependencies git
-
-    clone_or_pull "${qt5ct_repo}" "${qt5ct_repo_dir}"
-
-    local theme_path="${qt5ct_repo_dir}/themes/${theme_file}"
-    if [[ ! -f "${theme_path}" ]]; then
-        log_error "Theme file not found: ${theme_path}"
-        return 1
-    fi
-
-    mkdir -p "${qt5ct_colors_dir}" "${qt6ct_colors_dir}"
-    cp -f "${theme_path}" "${qt5ct_colors_dir}/"
-    cp -f "${theme_path}" "${qt6ct_colors_dir}/"
-
-    log_info "Installed ${accent} accent to qt5ct and qt6ct colors"
-    log_info "Open qt5ct/qt6ct → set palette to Custom → select catppuccin-mocha-${accent}"
-    log_success "Catppuccin Mocha theme installed for qt5ct/qt6ct"
-}
-
-# ─── Port: Qt Creator ───────────────────────────────────────────────────────────
-
-install_qtcreator() {
-    log_step "Installing Catppuccin Mocha theme for Qt Creator"
-
-    local qtcreator_repo_dir="${CATPPUCCIN_DIR}/qtcreator"
-    local qtcreator_repo="https://github.com/catppuccin/qtcreator"
-    local qtcreator_config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/QtProject/qtcreator"
-    local qtcreator_styles_dir="${qtcreator_config_dir}/styles"
-    local qtcreator_themes_dir="${qtcreator_config_dir}/themes"
-
-    ensure_dependencies git
-
-    clone_or_pull "${qtcreator_repo}" "${qtcreator_repo_dir}"
-
-    mkdir -p "${qtcreator_styles_dir}" "${qtcreator_themes_dir}"
-    cp -f "${qtcreator_repo_dir}/styles/catppuccin-mocha.xml" "${qtcreator_styles_dir}/"
-    cp -f "${qtcreator_repo_dir}/themes/catppuccin-mocha.creatortheme" "${qtcreator_themes_dir}/"
-
-    log_info "Installed style and theme to ${qtcreator_config_dir}/"
-    log_info "Edit → Preferences → Environment → Theme → catppuccin-mocha"
-    log_success "Catppuccin Mocha theme installed for Qt Creator"
 }
 
 # ─── Port: Vim ──────────────────────────────────────────────────────────────────
@@ -407,20 +323,11 @@ main() {
         --limine)
             run_ports "limine"
             ;;
-        --lxqt)
-            run_ports "lxqt"
-            ;;
         --micro)
             run_ports "micro"
             ;;
         --mpv)
             run_ports "mpv"
-            ;;
-        --qt5ct)
-            run_ports "qt5ct"
-            ;;
-        --qtcreator)
-            run_ports "qtcreator"
             ;;
         --vim)
             run_ports "vim"

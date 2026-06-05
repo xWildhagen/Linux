@@ -34,7 +34,7 @@ Desktop: `Plasma Desktop`
 
 Additional packages:
 
-- `CachyOS`
+- `CachyOS Packages`
 - `CachyOS shell configuration`
 - `Base-devel + Common packages`
 - `KDE-Desktop`

@@ -5,9 +5,31 @@ set -eou pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/.shared/helpers.sh"
 
-WALLPAPER_PATH="${SCRIPT_DIR}/.assets/aurora.png"
+# ─── Configuration ──────────────────────────────────────────────────────────────
 
-set_wallpaper() {
+WALLPAPER_PATH="${SCRIPT_DIR}/.assets/aurora.png"
+AVAILABLE_THEMES=("wallpaper")
+
+# ─── Usage ──────────────────────────────────────────────────────────────────────
+
+usage() {
+    cat <<EOF
+🎨 CachyOS Theming Script
+
+Usage: ./theming.sh [OPTION]
+
+Options:
+  --help       Show this help message
+  --all        Apply all available theming
+  --wallpaper  Set CachyOS wallpaper to aurora.png
+
+Available themes: ${AVAILABLE_THEMES[*]}
+EOF
+}
+
+# ─── Theme: Wallpaper ───────────────────────────────────────────────────────────
+
+apply_wallpaper() {
     log_step "Setting CachyOS wallpaper 🖼️"
 
     if [[ ! -f "${WALLPAPER_PATH}" ]]; then
@@ -36,8 +58,47 @@ set_wallpaper() {
     fi
 }
 
+# ─── Dispatch ───────────────────────────────────────────────────────────────────
+
+run_themes() {
+    local themes=("$@")
+
+    for theme in "${themes[@]}"; do
+        local fn="apply_${theme}"
+        if declare -f "${fn}" > /dev/null 2>&1; then
+            "${fn}"
+        else
+            log_error "Unknown theme option: ${theme} ❌"
+            return 1
+        fi
+    done
+
+    log_success "Done applying themes! 🎉"
+}
+
 main() {
-    set_wallpaper
+    if [[ $# -eq 0 ]]; then
+        usage
+        return 0
+    fi
+
+    case "$1" in
+        --all)
+            run_themes "${AVAILABLE_THEMES[@]}"
+            ;;
+        --wallpaper)
+            run_themes "wallpaper"
+            ;;
+        --help)
+            usage
+            ;;
+        *)
+            log_error "Unknown option: $1 ❌"
+            echo ""
+            usage
+            return 1
+            ;;
+    esac
 }
 
 main "$@"
