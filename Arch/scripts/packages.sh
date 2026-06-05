@@ -1,58 +1,91 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-CONF_DIR="${HOME}/arch/scripts/conf"
-source "${CONF_DIR}/packages.conf"
+set -eou pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../../.shared/helpers.sh"
+source "${SCRIPT_DIR}/conf/packages.conf"
+
+# ─── Packages Setup ─────────────────────────────────────────────────────────────
 
 # https://github.com/Jguer/yay
 install_yay() {
-    echo_color BLUE "Checking for existing Yay installation..."
+    log_step "Checking for existing Yay installation... ⏳"
     if command -v yay &> /dev/null; then
-        echo_color GREEN "Yay is already installed."
+        log_success "Yay is already installed ✅"
         return 0
     fi
 
-    cd ${HOME} || { echo_color RED "Error: Could not find home directory."; return 1; }
-    echo_color BLUE "Installing git and base-devel..."
-    sudo pacman -S --noconfirm --needed git base-devel || { echo_color RED "Error: Failed to install git and base-devel."; return 1; }
+    cd "${HOME}" || {
+        log_error "Could not change to home directory ❌"
+        return 1
+    }
     
-    if [ -d "yay" ]; then
-        echo_color BLUE "Pulling latest Yay changes..."
-        (cd yay && git pull) || { echo_color RED "Error: Failed to pull latest Yay changes."; return 1; }
+    log_step "Installing git and base-devel... ⏳"
+    sudo pacman -S --noconfirm --needed git base-devel || {
+        log_error "Failed to install git and base-devel ❌"
+        return 1
+    }
+    
+    if [[ -d "yay" ]]; then
+        log_step "Pulling latest Yay changes... ⏳"
+        (cd yay && git pull) || {
+            log_error "Failed to pull latest Yay changes ❌"
+            return 1
+        }
     else
-        echo_color BLUE "Cloning Yay repository..."
-        git clone https://aur.archlinux.org/yay.git || { echo_color RED "Error: Failed to clone Yay repository."; return 1; }
+        log_step "Cloning Yay repository... ⏳"
+        git clone https://aur.archlinux.org/yay.git || {
+            log_error "Failed to clone Yay repository ❌"
+            return 1
+        }
     fi
 
-    echo_color BLUE "Installing Yay..."
-    cd yay || { echo_color RED "Error: Could not find Yay directory."; return 1; }
-    makepkg -si --noconfirm || { echo_color RED "Error: Failed to build and install Yay."; return 1; }
+    log_step "Installing Yay... ⏳"
+    cd yay || {
+        log_error "Could not find Yay directory ❌"
+        return 1
+    }
+    makepkg -si --noconfirm || {
+        log_error "Failed to build and install Yay ❌"
+        return 1
+    }
 
-    echo_color BLUE "Cleaning up Yay build files..."
-    cd ${HOME} || { echo_color RED "Error: Could not find home directory."; return 1; }
-    sudo rm -r yay
+    log_step "Cleaning up Yay build files... ⏳"
+    cd "${HOME}" || {
+        log_error "Could not change to home directory ❌"
+        return 1
+    }
+    rm -rf yay
 
-    echo_color GREEN "Yay installed successfully."
+    log_success "Yay installed successfully ✅"
 
     return 0
 }
 
 remove_packages() {
-    echo_color BLUE "Checking REMOVE_PACKAGES array..."
+    log_step "Checking REMOVE_PACKAGES array ⏳"
     if [[ -z "${REMOVE_PACKAGES+x}" || ${#REMOVE_PACKAGES[@]} -eq 0 ]]; then
-        echo_color RED "Error: REMOVE_PACKAGES array is not defined or is empty."
+        log_error "REMOVE_PACKAGES array is not defined or is empty ❌"
         return 1
     fi
 
-    echo_color BLUE "Removing packages..."
-    for PACKAGE in "${REMOVE_PACKAGES[@]}"; do
-        if pacman -Q | awk '{print $1}' | grep -xq "$PACKAGE"; then
-            echo_color BLUE "Removing (pacman): $PACKAGE"
-            sudo pacman -Rns --noconfirm "$PACKAGE" || { echo_color RED "Error: Failed to remove $PACKAGE."; return 1; }
-        elif command -v yay &>/dev/null && yay -Q | awk '{print $1}' | grep -xq "$PACKAGE"; then
-            echo_color BLUE "Removing (yay): $PACKAGE"
-            yay -Rns --noconfirm "$PACKAGE" || { echo_color RED "Error: Failed to remove $PACKAGE."; return 1; }
+    log_step "Removing packages... ⏳"
+    for package in "${REMOVE_PACKAGES[@]}"; do
+        if pacman -Q | awk '{print $1}' | grep -xq "${package}"; then
+            log_info "Removing (pacman): ${package} ℹ️"
+            sudo pacman -Rns --noconfirm "${package}" || {
+                log_error "Failed to remove ${package} ❌"
+                return 1
+            }
+        elif command -v yay &>/dev/null && yay -Q | awk '{print $1}' | grep -xq "${package}"; then
+            log_info "Removing (yay): ${package} ℹ️"
+            yay -Rns --noconfirm "${package}" || {
+                log_error "Failed to remove ${package} ❌"
+                return 1
+            }
         else
-            echo_color GREEN "$PACKAGE not found."
+            log_success "${package} not found ✅"
         fi
     done
 
@@ -60,28 +93,43 @@ remove_packages() {
 }
 
 install_packages() {
-    install_yay || { echo_color RED "Error: Failed to install Yay."; return 1; }
+    install_yay || {
+        log_error "Failed to install Yay ❌"
+        return 1
+    }
 
-    echo_color BLUE "Checking INSTALL_PACKAGES array..."
+    log_step "Checking INSTALL_PACKAGES array ⏳"
     if [[ -z "${INSTALL_PACKAGES+x}" || ${#INSTALL_PACKAGES[@]} -eq 0 ]]; then
-        echo_color RED "Error: INSTALL_PACKAGES array is not defined or is empty."
+        log_error "INSTALL_PACKAGES array is not defined or is empty ❌"
         return 1
     fi
 
-    echo_color BLUE "Updating installed pacman and yay packages..."
-    sudo pacman -Syu --noconfirm || { echo_color RED "Error: Failed to update package database."; return 1; }
-    yay -Syu --noconfirm || { echo_color RED "Error: Failed to update AUR packages."; return 1; }
+    log_step "Updating installed pacman and yay packages... ⏳"
+    sudo pacman -Syu --noconfirm || {
+        log_error "Failed to update package database ❌"
+        return 1
+    }
+    yay -Syu --noconfirm || {
+        log_error "Failed to update AUR packages ❌"
+        return 1
+    }
 
-    echo_color BLUE "Installing packages..."
-    for PACKAGE in "${INSTALL_PACKAGES[@]}"; do
-        if pacman -Si "$PACKAGE" &>/dev/null; then
-            echo_color BLUE "Installing (pacman): $PACKAGE"
-            sudo pacman -S --noconfirm --needed "$PACKAGE" || { echo_color RED "Error: Failed to install $PACKAGE."; return 1; }
-        elif command -v yay &>/dev/null && yay -Si "$PACKAGE" &>/dev/null; then
-            echo_color BLUE "Installing (yay): $PACKAGE"
-            yay -S --noconfirm --needed "$PACKAGE" || { echo_color RED "Error: Failed to install $PACKAGE."; return 1; }
+    log_step "Installing packages... ⏳"
+    for package in "${INSTALL_PACKAGES[@]}"; do
+        if pacman -Si "${package}" &>/dev/null; then
+            log_info "Installing (pacman): ${package} ℹ️"
+            sudo pacman -S --noconfirm --needed "${package}" || {
+                log_error "Failed to install ${package} ❌"
+                return 1
+            }
+        elif command -v yay &>/dev/null && yay -Si "${package}" &>/dev/null; then
+            log_info "Installing (yay): ${package} ℹ️"
+            yay -S --noconfirm --needed "${package}" || {
+                log_error "Failed to install ${package} ❌"
+                return 1
+            }
         else
-            echo_color RED "Error: $PACKAGE not found."
+            log_error "${package} not found in repositories ❌"
         fi
     done
 
@@ -89,53 +137,66 @@ install_packages() {
 }
 
 get_repositories() {
-    echo_color BLUE "Checking REPOSITORIES array..."
+    log_step "Checking REPOSITORIES array ⏳"
     if [[ -z "${REPOSITORIES+x}" || ${#REPOSITORIES[@]} -eq 0 ]]; then
-        echo_color RED "Error: REPOSITORIES array is not defined or is empty."
+        log_error "REPOSITORIES array is not defined or is empty ❌"
         return 1
     fi
     
-    cd ${HOME} || { echo_color RED "Error: Could not find home directory."; return 1; }
+    cd "${HOME}" || {
+        log_error "Could not change to home directory ❌"
+        return 1
+    }
 
-    echo_color BLUE "Getting repositories..."
-    for REPOSITORY in "${REPOSITORIES[@]}"; do
-        REPO=$(echo "${REPOSITORY}" | awk '{print $1}')
-        DESTINATION=$(echo "${REPOSITORY}" | awk '{print $2}')
+    log_step "Getting repositories... ⏳"
+    for repository in "${REPOSITORIES[@]}"; do
+        local repo destination
+        repo=$(echo "${repository}" | awk '{print $1}')
+        destination=$(echo "${repository}" | awk '{print $2}')
 
-        if [ -z "${DESTINATION}" ]; then
-            DESTINATION=$(basename "${REPO}")
+        if [[ -z "${destination}" ]]; then
+            destination=$(basename "${repo}")
         fi
 
-        if [ -d "${DESTINATION}" ]; then
-            echo_color BLUE "Pulling latest ${REPO} changes..."
-            git -C ${DESTINATION} pull || echo_color RED "Error: Failed to pull latest ${REPO} changes."
+        if [[ -d "${destination}" ]]; then
+            log_info "Pulling latest ${repo} changes... ℹ️"
+            git -C "${destination}" pull || {
+                log_error "Failed to pull latest ${repo} changes ❌"
+                return 1
+            }
         else
-            echo_color BLUE "Cloning ${REPO} repository..."
-            git clone https://github.com/${REPO} ${DESTINATION} || echo_color RED "Error: Failed to clone ${REPO} repository."
+            log_info "Cloning ${repo} repository... ℹ️"
+            git clone "https://github.com/${repo}" "${destination}" || {
+                log_error "Failed to clone ${repo} repository ❌"
+                return 1
+            }
         fi
     done
 
     return 0
 }
 
+# ─── Dispatch ───────────────────────────────────────────────────────────────────
+
 packages_main() {
-    starting "PACKAGE INSTALLATION"
+    log_step "Starting PACKAGE INSTALLATION ⏳"
 
     if ! remove_packages; then
-        failed "PACKAGE REMOVAL"
+        log_error "PACKAGE REMOVAL FAILED ❌"
+        return 1
     fi
 
     if ! install_packages; then
-        failed "PACKAGE INSTALLATION"
+        log_error "PACKAGE INSTALLATION FAILED ❌"
+        return 1
     fi
 
     if ! get_repositories; then
-        failed "GETTING REPOSITORIES"
+        log_error "GETTING REPOSITORIES FAILED ❌"
+        return 1
     fi
 
-    # sudo systemctl enable NetworkManager --now
-
-    complete "PACKAGE INSTALLATION"
+    log_success "PACKAGE INSTALLATION COMPLETE 🎉"
 
     return 0
 }

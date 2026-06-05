@@ -1,19 +1,27 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-CONF_DIR="${HOME}/arch/scripts/conf"
-source "${CONF_DIR}/files.conf"
+set -eou pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../../.shared/helpers.sh"
+source "${SCRIPT_DIR}/conf/files.conf"
+
+# ─── Home Setup ───────────────────────────────────────────────────────────────
 
 delete_files() {
-    echo_color BLUE "Checking DELETE_FILES array..."
+    log_step "Checking DELETE_FILES array ⏳"
     if [[ -z "${DELETE_FILES+x}" || ${#DELETE_FILES[@]} -eq 0 ]]; then
-        echo_color RED "Error: DELETE_FILES array is not defined or is empty"
+        log_error "DELETE_FILES array is not defined or is empty ❌"
         return 1
     fi
 
-    for FILE in "${DELETE_FILES[@]}"; do
-        if [ -e "${HOME}/${FILE}" ]; then
-            echo_color BLUE "Deleting $FILE..."
-            sudo rm -r -- "${HOME}/${FILE}" || echo_color RED "Error: Could not delete ${FILE}."
+    for file in "${DELETE_FILES[@]}"; do
+        if [[ -e "${HOME}/${file}" ]]; then
+            log_step "Deleting ${file}... ⏳"
+            sudo rm -r -- "${HOME}/${file}" || {
+                log_error "Could not delete ${file} ❌"
+                return 1
+            }
         fi
     done
 
@@ -21,27 +29,37 @@ delete_files() {
 }
 
 create_files() {
-    echo_color BLUE "Checking KEEP_FILES array..."
+    log_step "Checking KEEP_FILES array ⏳"
     if [[ -z "${KEEP_FILES+x}" || ${#KEEP_FILES[@]} -eq 0 ]]; then
-        echo_color RED "Error: KEEP_FILES array is not defined or is empty."
+        log_error "KEEP_FILES array is not defined or is empty ❌"
         return 1
     fi
 
-    for FILE in "${KEEP_FILES[@]}"; do
-        FULL_PATH="${HOME}/${FILE}"
-        if [[ "${FILE}" == */ ]]; then
-            if [ ! -d "${FULL_PATH}" ]; then
-                echo_color BLUE "Creating ${FILE}..."
-                mkdir -p -- "${FULL_PATH}" || echo_color RED "Error: Could not create ${FILE}."
+    for file in "${KEEP_FILES[@]}"; do
+        local full_path="${HOME}/${file}"
+        if [[ "${file}" == */ ]]; then
+            if [[ ! -d "${full_path}" ]]; then
+                log_step "Creating directory ${file}... ⏳"
+                mkdir -p -- "${full_path}" || {
+                    log_error "Could not create directory ${file} ❌"
+                    return 1
+                }
             fi
         else
-            PARENT_DIR=$(dirname "${FULL_PATH}")
-            if [ ! -d "${PARENT_DIR}" ]; then
-                mkdir -p -- "${PARENT_DIR}" || echo_color RED "Error: Could not create ${FILE}."
+            local parent_dir
+            parent_dir=$(dirname "${full_path}")
+            if [[ ! -d "${parent_dir}" ]]; then
+                mkdir -p -- "${parent_dir}" || {
+                    log_error "Could not create directory for ${file} ❌"
+                    return 1
+                }
             fi
-            if [ ! -f "${FULL_PATH}" ]; then
-                echo_color BLUE "Creating ${FILE}..."
-                touch -- "${FULL_PATH}" || echo_color RED "Error: Could not create ${FILE}."
+            if [[ ! -f "${full_path}" ]]; then
+                log_step "Creating file ${file}... ⏳"
+                touch -- "${full_path}" || {
+                    log_error "Could not create file ${file} ❌"
+                    return 1
+                }
             fi
         fi
     done
@@ -50,58 +68,69 @@ create_files() {
 }
 
 link_files() {
-    echo_color BLUE "Checking DOTFILES array..."
+    log_step "Checking DOTFILES array ⏳"
     if [[ -z "${DOTFILES+x}" || ${#DOTFILES[@]} -eq 0 ]]; then
-        echo_color RED "Error: DOTFILES array is not defined or is empty."
+        log_error "DOTFILES array is not defined or is empty ❌"
         return 1
     fi
 
-    echo_color BLUE "Creating symbolic links..."
-    for DOTFILE in "${DOTFILES[@]}"; do
-        SRC="" TGT=""
-        read -r SRC TGT <<< "${DOTFILE}"
-        [[ -z "${TGT}" ]] && TGT="${SRC}"
+    log_step "Creating symbolic links ⏳"
+    for dotfile in "${DOTFILES[@]}"; do
+        local src="" tgt=""
+        read -r src tgt <<< "${dotfile}"
+        [[ -z "${tgt}" ]] && tgt="${src}"
         
-        SOURCE="${HOME}/arch/dotfiles/${SRC}"
-        TARGET="${TGT}"
-        TARGET_DIR=$(dirname "${TARGET}")
+        local source_path="${HOME}/arch/dotfiles/${src}"
+        local target_path="${tgt}"
+        local target_dir
+        target_dir=$(dirname "${target_path}")
         
-        echo_color BLUE "Linking ${TARGET}..."
-        if [[ ! -d "${TARGET_DIR}" ]]; then
-            echo_color BLUE "Creating directory: ${TARGET_DIR}"
-            mkdir -p -- "${TARGET_DIR}" || sudo mkdir -p -- "${TARGET_DIR}" || { 
-                echo_color RED "Error: Could not create directory ${TARGET_DIR}."
+        log_info "Linking ${target_path}... ℹ️"
+        if [[ ! -d "${target_dir}" ]]; then
+            log_info "Creating directory: ${target_dir} ℹ️"
+            mkdir -p -- "${target_dir}" || sudo mkdir -p -- "${target_dir}" || { 
+                log_error "Could not create directory ${target_dir} ❌"
                 return 1
             }
         fi
-        sudo rm -rf -- "${TARGET}"
-        ln -sf -- "${SOURCE}" "${TARGET}" 2>/dev/null || sudo ln -sf -- "${SOURCE}" "${TARGET}" || {
-            echo_color RED "Error: Could not link ${TARGET}."
+        
+        sudo rm -rf -- "${target_path}"
+        ln -sf -- "${source_path}" "${target_path}" 2>/dev/null || sudo ln -sf -- "${source_path}" "${target_path}" || {
+            log_error "Could not link ${target_path} ❌"
             return 1
         }
     done
 
-    hyprctl reload >/dev/null 2>&1 || echo_color YELLOW "Hyprctl not found."
+    if command -v hyprctl &> /dev/null; then
+        hyprctl reload >/dev/null 2>&1 || log_warn "Hyprctl reload failed ⚠️"
+    else
+        log_warn "Hyprctl not found, skipping reload ⚠️"
+    fi
 
     return 0
 }
 
+# ─── Dispatch ───────────────────────────────────────────────────────────────────
+
 home_main() {
-    starting "HOME SETUP"
+    log_step "Starting HOME SETUP ⏳"
 
     if ! delete_files; then
-        failed "DELETING FILES"
+        log_error "DELETING FILES FAILED ❌"
+        return 1
     fi
 
     if ! create_files; then
-        failed "CREATING FILES"
+        log_error "CREATING FILES FAILED ❌"
+        return 1
     fi
 
     if ! link_files; then
-        failed "LINKING FILES"
+        log_error "LINKING FILES FAILED ❌"
+        return 1
     fi
 
-    complete "HOME SETUP"
+    log_success "HOME SETUP COMPLETE 🎉"
     
     return 0
 }

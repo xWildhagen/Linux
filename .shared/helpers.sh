@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eou pipefail
+
 # ─── Logging ────────────────────────────────────────────────────────────────────
 
 log_info() {
@@ -27,6 +29,10 @@ log_step() {
 ensure_dependencies() {
     local deps=("$@")
     local missing=()
+
+    if [[ -z "${deps+x}" || ${#deps[@]} -eq 0 ]]; then
+        return 0
+    fi
 
     for dep in "${deps[@]}"; do
         if ! command -v "${dep}" &> /dev/null; then

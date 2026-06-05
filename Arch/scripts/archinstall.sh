@@ -1,26 +1,36 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+set -eou pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../../.shared/helpers.sh"
+
+# ─── Configuration ──────────────────────────────────────────────────────────────
 
 ARCHINSTALL_CONFIG="${HOME}/arch/archinstall/user_configuration.json"
 ARCHINSTALL_CREDS="${HOME}/arch/archinstall/user_credentials.json"
 
+# ─── Archinstall Setup ────────────────────────────────────────────────────────
+
 run_archinstall() {
-    echo_color BLUE "Checking ARCHINSTALL_CONFIG file..."
-    if [ ! -f "${ARCHINSTALL_CONFIG}" ]; then
-        echo_color RED "Error: Archinstall configuration file not found at ${ARCHINSTALL_CONFIG}"
+    log_step "Checking ARCHINSTALL_CONFIG file ⏳"
+    if [[ ! -f "${ARCHINSTALL_CONFIG}" ]]; then
+        log_error "Archinstall configuration file not found at ${ARCHINSTALL_CONFIG} ❌"
         return 1
     fi
 
-    echo_color BLUE "Checking ARCHINSTALL_CREDS file..."
-    if [ ! -f "${ARCHINSTALL_CREDS}" ]; then
-        echo_color RED "Error: Archinstall credentials file not found at ${ARCHINSTALL_CREDS}"
+    log_step "Checking ARCHINSTALL_CREDS file ⏳"
+    if [[ ! -f "${ARCHINSTALL_CREDS}" ]]; then
+        log_error "Archinstall credentials file not found at ${ARCHINSTALL_CREDS} ❌"
         return 1
     fi
 
-    echo_color BLUE "Starting archinstall..."
-    if archinstall --config $ARCHINSTALL_CONFIG --creds $ARCHINSTALL_CREDS; then
+    log_step "Starting archinstall ⏳"
+    if sudo archinstall --config "${ARCHINSTALL_CONFIG}" --creds "${ARCHINSTALL_CREDS}"; then
         clear
-        return 0
+        log_success "archinstall completed successfully ✅"
     else
+        log_error "archinstall failed ❌"
         return 1
     fi
 
@@ -28,34 +38,48 @@ run_archinstall() {
 }
 
 post_install() {
-    echo_color BLUE "Performing post-installation setup..."
-    echo_color BLUE "Cloning repository..."
-    arch-chroot /mnt git clone https://github.com/xwildhagen/arch.git /home/wildhagen/arch || { echo_color RED "Error: Could not clone repository"; return 1; }
-
-    echo_color BLUE "Setting permissions..."
-    arch-chroot /mnt chown -R 1000:1000 "/home/wildhagen/" || { echo_color RED "Error: Could not set permissions"; return 1; }
-    arch-chroot /mnt chmod -R +rx "/home/wildhagen/" || { echo_color RED "Error: Could not set permissions"; return 1; }
+    log_step "Performing post-installation setup ⏳"
     
-    echo_color GREEN "Post-installation setup complete."
+    log_step "Cloning repository... ⏳"
+    sudo arch-chroot /mnt git clone https://github.com/xwildhagen/arch.git /home/wildhagen/arch || {
+        log_error "Could not clone repository ❌"
+        return 1
+    }
+
+    log_step "Setting permissions ⏳"
+    sudo arch-chroot /mnt chown -R 1000:1000 "/home/wildhagen/" || {
+        log_error "Could not set permissions ❌"
+        return 1
+    }
+    sudo arch-chroot /mnt chmod -R +rx "/home/wildhagen/" || {
+        log_error "Could not set permissions ❌"
+        return 1
+    }
+    
+    log_success "Post-installation setup complete ✅"
 
     return 0
 }
 
+# ─── Dispatch ───────────────────────────────────────────────────────────────────
+
 archinstall_main() {
-    starting "ARCHINSTALL SETUP"
+    log_step "Starting ARCHINSTALL SETUP ⏳"
 
     if ! run_archinstall; then
-        failed "ARCHINSTALL"
+        log_error "ARCHINSTALL FAILED ❌"
         return 1
     fi
 
     if ! post_install; then
-        failed "POST-INSTALL"
+        log_error "POST-INSTALL FAILED ❌"
+        return 1
     fi
 
-    complete "ARCHINSTALL SETUP"
+    log_success "ARCHINSTALL SETUP COMPLETE 🎉"
 
-    reboot
+    log_warn "Rebooting the system ⚠️"
+    sudo reboot
 
     return 0
 }

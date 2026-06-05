@@ -1,46 +1,84 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Loop through all .sh files in the scripts directory and source them
-for file in "${HOME}/arch/scripts/"*.sh; do
-    source "$file"
-done
+set -eou pipefail
 
-main() {
-    while true; do
-        clear
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../.shared/helpers.sh"
 
-        echo_dashes BLUE 50
-        echo_color BLUE "MAIN MENU"
-        echo_dashes BLUE 50
+source "${SCRIPT_DIR}/scripts/archinstall.sh"
+source "${SCRIPT_DIR}/scripts/packages.sh"
+source "${SCRIPT_DIR}/scripts/home.sh"
 
-        echo_color BLUE "1) Start archinstall"
-        echo_color BLUE "2) Start package installation"
-        echo_color BLUE "3) Start home setup"
-        echo_color BLUE "0) Quit"
-        echo_dashes BLUE 50
+# ─── Configuration ──────────────────────────────────────────────────────────────
 
-        read_input PURPLE "ENTER OPTION: " OPTION
+AVAILABLE_COMMANDS=("archinstall" "packages" "home")
 
-        case "$OPTION" in
-        1)
-            archinstall_main
-            ;;
-        2)
-            packages_main
-            ;;
-        3)
-            home_main
-            ;;
-        0|q|Q)
-            echo_color GREEN "EXITING SCRIPT. GOODBYE!"
-            echo_dashes BLUE 50
-            break
-            ;;
-        *)
-            read_input RED "INVALID OPTION. PRESS ENTER TO CONTINUE..."
-            ;;
-        esac
-    done
+# ─── Usage ──────────────────────────────────────────────────────────────────────
+
+usage() {
+    cat <<EOF
+🖥️ Arch Linux Setup Script
+
+Usage: ./main.sh [OPTION]
+
+Options:
+  --help         Show this help message
+  --all          Run all setup steps
+  --archinstall  Start archinstall
+  --packages     Start package installation
+  --home         Start home setup
+
+Available commands: ${AVAILABLE_COMMANDS[*]}
+EOF
 }
 
-main
+# ─── Dispatch ───────────────────────────────────────────────────────────────────
+
+run_commands() {
+    local commands=("$@")
+
+    for cmd in "${commands[@]}"; do
+        local fn="${cmd}_main"
+        if declare -f "${fn}" > /dev/null 2>&1; then
+            "${fn}"
+        else
+            log_error "Unknown command: ${cmd} ❌"
+            return 1
+        fi
+    done
+
+    log_success "All requested setups completed successfully! 🎉"
+}
+
+main() {
+    if [[ $# -eq 0 ]]; then
+        usage
+        return 0
+    fi
+
+    case "$1" in
+        --all)
+            run_commands "${AVAILABLE_COMMANDS[@]}"
+            ;;
+        --archinstall)
+            run_commands "archinstall"
+            ;;
+        --packages)
+            run_commands "packages"
+            ;;
+        --home)
+            run_commands "home"
+            ;;
+        --help)
+            usage
+            ;;
+        *)
+            log_error "Unknown option: $1 ❌"
+            echo ""
+            usage
+            return 1
+            ;;
+    esac
+}
+
+main "$@"
