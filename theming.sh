@@ -8,7 +8,7 @@ source "${SCRIPT_DIR}/.shared/helpers.sh"
 # ─── Configuration ──────────────────────────────────────────────────────────────
 
 WALLPAPER_PATH="${SCRIPT_DIR}/.assets/aurora.png"
-AVAILABLE_THEMES=("wallpaper" "lockscreen")
+AVAILABLE_THEMES=("wallpaper" "lockscreen" "loginscreen")
 
 # ─── Usage ──────────────────────────────────────────────────────────────────────
 
@@ -23,6 +23,7 @@ Options:
   --all         Apply all available theming
   --wallpaper   Set CachyOS wallpaper to aurora.png
   --lockscreen  Set CachyOS lockscreen to aurora.png
+  --loginscreen Set CachyOS login screen (SDDM) to aurora.png
 
 Available themes: ${AVAILABLE_THEMES[*]}
 EOF
@@ -90,6 +91,70 @@ apply_lockscreen() {
     return 0
 }
 
+# ─── Theme: Login Screen ────────────────────────────────────────────────────────
+
+apply_loginscreen() {
+    log_step "Setting CachyOS login screen (SDDM) 🖼️"
+
+    if [[ ! -f "${WALLPAPER_PATH}" ]]; then
+        log_error "Wallpaper file not found: ${WALLPAPER_PATH} ❌"
+        return 1
+    fi
+
+    if ! command -v sddm &> /dev/null && [[ ! -d /usr/share/sddm ]]; then
+        log_error "SDDM does not appear to be installed or running ❌"
+        return 1
+    fi
+
+    local target_dir="/usr/share/backgrounds"
+    local target_wallpaper="${target_dir}/cachyos-custom-login.png"
+
+    log_info "Copying wallpaper to ${target_dir} for SDDM access ⏳"
+    sudo mkdir -p "${target_dir}" || { log_error "Failed to create ${target_dir} ❌"; return 1; }
+    sudo cp "${WALLPAPER_PATH}" "${target_wallpaper}" || { log_error "Failed to copy wallpaper for SDDM ❌"; return 1; }
+    sudo chmod 644 "${target_wallpaper}" || { log_error "Failed to set permissions for SDDM wallpaper ❌"; return 1; }
+
+    # Detect current SDDM theme
+    local sddm_theme=""
+    
+    # Check configurations, later files override earlier ones
+    for conf_file in /etc/sddm.conf /etc/sddm.conf.d/*.conf; do
+        if [[ -f "${conf_file}" ]]; then
+            local extracted_theme
+            extracted_theme=$(grep -E '^Current=' "${conf_file}" | tail -n1 | cut -d'=' -f2 || true)
+            if [[ -n "${extracted_theme}" ]]; then
+                sddm_theme="${extracted_theme}"
+            fi
+        fi
+    done
+
+    # Fallback to CachyOS default or breeze if none found
+    if [[ -z "${sddm_theme}" ]]; then
+        if [[ -d "/usr/share/sddm/themes/cachyos" ]]; then
+            sddm_theme="cachyos"
+        elif [[ -d "/usr/share/sddm/themes/breeze" ]]; then
+            sddm_theme="breeze"
+        else
+            log_error "Could not determine SDDM theme ❌"
+            return 1
+        fi
+    fi
+
+    log_info "Applying login screen wallpaper to SDDM theme: ${sddm_theme} ⏳"
+
+    local theme_dir="/usr/share/sddm/themes/${sddm_theme}"
+    if [[ ! -d "${theme_dir}" ]]; then
+        log_error "SDDM theme directory not found: ${theme_dir} ❌"
+        return 1
+    fi
+
+    local theme_conf_user="${theme_dir}/theme.conf.user"
+    echo -e "[General]\nbackground=${target_wallpaper}" | sudo tee "${theme_conf_user}" > /dev/null || { log_error "Failed to update SDDM theme config ❌"; return 1; }
+
+    log_success "Successfully applied login screen wallpaper for SDDM ✅"
+    return 0
+}
+
 # ─── Dispatch ───────────────────────────────────────────────────────────────────
 
 run_themes() {
@@ -129,6 +194,9 @@ main() {
             ;;
         --lockscreen)
             run_themes "lockscreen"
+            ;;
+        --loginscreen)
+            run_themes "loginscreen"
             ;;
         --help)
             usage
