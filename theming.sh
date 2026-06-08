@@ -149,9 +149,29 @@ apply_loginscreen() {
     fi
 
     local theme_conf_user="${theme_dir}/theme.conf.user"
-    echo -e "[General]\nbackground=${target_wallpaper}" | sudo tee "${theme_conf_user}" > /dev/null || { log_error "Failed to update SDDM theme config ❌"; return 1; }
+    echo -e "[General]\nbackground=${target_wallpaper}\ntype=image" | sudo tee "${theme_conf_user}" > /dev/null || { log_error "Failed to update SDDM theme config ❌"; return 1; }
+
+    # Bulletproof fallback: Overwrite the theme's default background image directly
+    # This ensures the wallpaper changes even if the theme ignores theme.conf.user overrides
+    local default_bg
+    default_bg=$(grep -E '^[bB]ackground=' "${theme_dir}/theme.conf" 2>/dev/null | tail -n1 | cut -d'=' -f2 | tr -d ' ' || true)
+    
+    if [[ -n "${default_bg}" ]]; then
+        # Handle relative paths within the theme directory
+        if [[ "${default_bg}" != /* ]]; then
+            default_bg="${theme_dir}/${default_bg}"
+        fi
+        
+        # If the file exists, overwrite it with our wallpaper
+        if [[ -f "${default_bg}" ]]; then
+            log_info "Overwriting default theme background at ${default_bg} as fallback ⏳"
+            sudo cp "${WALLPAPER_PATH}" "${default_bg}" || true
+            sudo chmod 644 "${default_bg}" || true
+        fi
+    fi
 
     log_success "Successfully applied login screen wallpaper for SDDM ✅"
+    log_info "Note: You may need to logout or reboot to see the SDDM changes. ℹ️"
     return 0
 }
 
