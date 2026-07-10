@@ -136,13 +136,13 @@ install_limine() {
 
     local limine_dir="${CATPPUCCIN_DIR}/limine"
     local limine_repo="https://github.com/catppuccin/limine"
-    local theme_file="catppuccin-mocha.conf"
+    local theme_file="catppuccin-mocha-lavender.conf"
 
     ensure_dependencies git
 
     clone_or_pull "${limine_repo}" "${limine_dir}"
 
-    local theme_path="${limine_dir}/themes/${theme_file}"
+    local theme_path="${limine_dir}/themes/mocha/${theme_file}"
     if [[ ! -f "${theme_path}" ]]; then
         log_error "Theme file not found: ${theme_path}"
         return 1
