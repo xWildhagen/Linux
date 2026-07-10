@@ -15,7 +15,12 @@ PACKAGES=(
     "curl"
     "vim"
     "htop"
-    # Add more packages here
+    "microsoft-edge-stable-bin"
+    "visual-studio-code-bin"
+    "antigravity-ide"
+    "antigravity-cli"
+    "moonlight-qt-bin"
+    "rclone"
 )
 
 # ─── Helper Functions ───────────────────────────────────────────────────────────
